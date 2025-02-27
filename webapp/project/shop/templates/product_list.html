@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Product List</h1>
+<a href="{% url 'product_create' %}" class="btn btn-primary">Add Product</a>
+<ul class="list-group mt-3">
+    {% for product in products %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="{% url 'product_detail' product.pk %}">{{ product.name }}</a>
+            <span>${{ product.price }}</span>
+            <a href="{% url 'product_delete' product.pk %}" class="btn btn-danger btn-sm">Delete</a>
+        </li>
+    {% endfor %}
+</ul>
+{% endblock %}
