@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Add Product</h1>
+<form method="post" class="mt-3">
+    {% csrf_token %}
+    {{ form.as_p }}  {# This automatically renders form fields with validation errors #}
+    <button type="submit" class="btn btn-success">Save</button>
+</form>
+{% endblock %}
