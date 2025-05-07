@@ -1,0 +1,164 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Schedule Graph</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .node-container { display: flex; gap: 20px; overflow-x: auto; }
+        .node { border: 1px solid #ccc; padding: 10px; border-radius: 8px; min-width: 200px; background: #f9f9f9; }
+        .item { display: flex; justify-content: space-between; margin: 5px 0; }
+        .item input { border: none; background: transparent; width: 100%; }
+        .item input:focus { outline: 1px solid #aaa; background: #fff; }
+        .controls button { margin-left: 5px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div id="login">
+        <h2>Login</h2>
+        <input id="username" placeholder="Username">
+        <input id="password" type="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+    </div>
+    <div id="graph" class="hidden">
+        <h2>Schedule Graph</h2>
+        <div id="subject-container" class="node-container"></div>
+        <div id="lecture-container" class="node-container"></div>
+        <div id="practice-container" class="node-container"></div>
+    </div>
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let token = '';
+        let selectedSubjectId = null;
+        let selectedLectureId = null;
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            fetch(`${API_BASE}/token/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+            .then(res => res.json())
+            .then(data => {
+                token = data.access;
+                document.getElementById('login').classList.add('hidden');
+                document.getElementById('graph').classList.remove('hidden');
+                loadSubjects();
+            });
+        }
+
+        function fetchAPI(url, method = 'GET', body = null) {
+            return fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: body ? JSON.stringify(body) : null
+            }).then(res => res.json());
+        }
+
+        function createItem(name, onUpdate, onDelete) {
+            const div = document.createElement('div');
+            div.className = 'item';
+            const input = document.createElement('input');
+            input.value = name;
+            input.onchange = () => onUpdate(input.value);
+            const btn = document.createElement('button');
+            btn.innerText = '❌';
+            btn.onclick = onDelete;
+            div.appendChild(input);
+            div.appendChild(btn);
+            return div;
+        }
+
+        function createNode(title, items, onAdd) {
+            const node = document.createElement('div');
+            node.className = 'node';
+            const header = document.createElement('h3');
+            header.textContent = title;
+            node.appendChild(header);
+            items.forEach(i => node.appendChild(i));
+            const addBtn = document.createElement('button');
+            addBtn.textContent = '+ Add';
+            addBtn.onclick = onAdd;
+            node.appendChild(addBtn);
+            return node;
+        }
+
+        function loadSubjects() {
+            fetchAPI(`${API_BASE}/subjects/`).then(subjects => {
+                const container = document.getElementById('subject-container');
+                container.innerHTML = '';
+                document.getElementById('lecture-container').innerHTML = '';
+                document.getElementById('practice-container').innerHTML = '';
+                subjects.forEach(s => {
+                    const node = createItem(s.name, newName => {
+                        fetchAPI(`${API_BASE}/subjects/${s.id}/update/`, 'PATCH', { name: newName });
+                    }, () => {
+                        fetchAPI(`${API_BASE}/subjects/${s.id}/delete/`, 'DELETE').then(loadSubjects);
+                    });
+                    node.onclick = () => loadLectures(s.id);
+                    container.appendChild(node);
+                });
+                const add = document.createElement('button');
+                add.textContent = '+ Add Subject';
+                add.onclick = () => {
+                    fetchAPI(`${API_BASE}/subjects/create/`, 'POST', { name: 'New Subject' }).then(loadSubjects);
+                };
+                container.appendChild(add);
+            });
+        }
+
+        function loadLectures(subjectId) {
+            selectedSubjectId = subjectId;
+            fetchAPI(`${API_BASE}/lectures/${subjectId}/`).then(lectures => {
+                const container = document.getElementById('lecture-container');
+                container.innerHTML = '';
+                document.getElementById('practice-container').innerHTML = '';
+                lectures.forEach(l => {
+                    const node = createItem(l.name, newName => {
+                        fetchAPI(`${API_BASE}/lectures/${l.id}/update/`, 'PATCH', { name: newName });
+                    }, () => {
+                        fetchAPI(`${API_BASE}/lectures/${l.id}/delete/`, 'DELETE').then(() => loadLectures(subjectId));
+                    });
+                    node.onclick = () => loadPractices(l.id);
+                    container.appendChild(node);
+                });
+                const add = document.createElement('button');
+                add.textContent = '+ Add Lecture';
+                add.onclick = () => {
+                    fetchAPI(`${API_BASE}/lectures/create/`, 'POST', { subject: subjectId, name: 'New Lecture' }).then(() => loadLectures(subjectId));
+                };
+                container.appendChild(add);
+            });
+        }
+
+        function loadPractices(lectureId) {
+            selectedLectureId = lectureId;
+            fetchAPI(`${API_BASE}/practices/${lectureId}/`).then(practices => {
+                const container = document.getElementById('practice-container');
+                container.innerHTML = '';
+                practices.forEach(p => {
+                    const node = createItem(p.name, newName => {
+                        fetchAPI(`${API_BASE}/practices/${p.id}/update/`, 'PATCH', { name: newName });
+                    }, () => {
+                        fetchAPI(`${API_BASE}/practices/${p.id}/delete/`, 'DELETE').then(() => loadPractices(lectureId));
+                    });
+                    container.appendChild(node);
+                });
+                const add = document.createElement('button');
+                add.textContent = '+ Add Practice';
+                add.onclick = () => {
+                    fetchAPI(`${API_BASE}/practices/create/`, 'POST', { lecture: lectureId, name: 'New Practice' }).then(() => loadPractices(lectureId));
+                };
+                container.appendChild(add);
+            });
+        }
+    </script>
+</body>
+</html>
