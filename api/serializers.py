@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Subject, Lecture, Practice
+from .models import Subject, Lecture, Practice, Subscriber
 
 class SubjectSerializer(serializers.ModelSerializer):
     class Meta:
@@ -15,3 +15,10 @@ class PracticeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Practice
         fields = '__all__'
+
+
+# serializers.py
+class SubscriberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subscriber
+        fields = ['email']
