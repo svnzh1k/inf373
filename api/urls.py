@@ -19,4 +19,7 @@ urlpatterns = [
     path('practices/create/', views.PracticeCreateView.as_view()),
     path('practices/<int:pk>/update/', views.PracticeUpdateView.as_view()),
     path('practices/<int:pk>/delete/', views.PracticeDeleteView.as_view()),
+
+    path('subscribers/', views.SubscriberListView.as_view(), name='subscriber-list'),
+    path('subscribers/subscribe/', views.SubscriberCreateView.as_view(), name='subscriber-create'),
 ]

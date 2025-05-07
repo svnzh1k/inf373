@@ -1,14 +1,16 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Subject, Lecture, Practice
-from .serializers import SubjectSerializer, LectureSerializer, PracticeSerializer
+from .models import Subject, Lecture, Practice, Subscriber
+from .serializers import SubjectSerializer, LectureSerializer, PracticeSerializer, SubscriberSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.core.cache import cache
+
+from .tasks import notify_subscribers_new_subject
 
 class SubjectListView(APIView):
     permission_classes = [AllowAny]
@@ -25,6 +27,7 @@ class SubjectListView(APIView):
         cache.set(cache_key, serializer.data, timeout=60 * 5)
         return Response(serializer.data)
 
+
 class SubjectCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -32,9 +35,17 @@ class SubjectCreateView(APIView):
     def post(self, request):
         serializer = SubjectSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            subject = serializer.save()
+            # notify_subscribers_new_subject.delay(subject.subject_name)  # 🚀
+            notify_subscribers_new_subject.apply_async(
+                args=[subject.subject_name],
+                countdown=30
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 class SubjectUpdateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -51,6 +62,8 @@ class SubjectUpdateView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+
 class SubjectDeleteView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -62,6 +75,8 @@ class SubjectDeleteView(APIView):
         subject = self.get_object(pk)
         subject.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 
 class LectureListView(APIView):
     permission_classes = [AllowAny]
@@ -78,6 +93,8 @@ class LectureListView(APIView):
         cache.set(cache_key, serializer.data, timeout=60 * 5)
         return Response(serializer.data)
 
+
+
 class LectureCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -88,6 +105,8 @@ class LectureCreateView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 class LectureUpdateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -104,6 +123,8 @@ class LectureUpdateView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+
 class LectureDeleteView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -115,6 +136,8 @@ class LectureDeleteView(APIView):
         lecture = self.get_object(pk)
         lecture.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 
 class PracticeListView(APIView):
     permission_classes = [AllowAny]
@@ -131,6 +154,8 @@ class PracticeListView(APIView):
         cache.set(cache_key, serializer.data, timeout=60 * 5)
         return Response(serializer.data)
 
+
+
 class PracticeCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -141,6 +166,8 @@ class PracticeCreateView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 class PracticeUpdateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -157,6 +184,8 @@ class PracticeUpdateView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+
 class PracticeDeleteView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -168,3 +197,28 @@ class PracticeDeleteView(APIView):
         practice = self.get_object(pk)
         practice.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+
+
+class SubscriberCreateView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(request=SubscriberSerializer, responses={201: SubscriberSerializer})
+    def post(self, request):
+        serializer = SubscriberSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+class SubscriberListView(APIView):
+    permission_classes = [IsAuthenticated]  # например, только админы
+
+    @extend_schema(responses={200: SubscriberSerializer(many=True)})
+    def get(self, request):
+        subscribers = Subscriber.objects.all()
+        serializer = SubscriberSerializer(subscribers, many=True)
+        return Response(serializer.data)
