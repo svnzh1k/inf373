@@ -39,7 +39,7 @@ class SubjectCreateView(APIView):
             # notify_subscribers_new_subject.delay(subject.subject_name)  # 🚀
             notify_subscribers_new_subject.apply_async(
                 args=[subject.subject_name],
-                countdown=30
+                countdown=100
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

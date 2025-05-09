@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -84,13 +85,15 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'scheduler',
-        'USER': 'scheduler_user',
-        'PASSWORD': 'scheduler_pass',
-        'HOST': 'localhost',
-        'PORT': 5432,
+        'NAME': os.environ.get('DATABASE_NAME', 'scheduler'),
+        'USER': os.environ.get('DATABASE_USER', 'scheduler_user'),
+        'PASSWORD': os.environ.get('DATABASE_PASSWORD', 'scheduler_pass'),
+        'HOST': os.environ.get('DATABASE_HOST', 'db'),
+        'PORT': os.environ.get('DATABASE_PORT', '5432'),
     }
 }
+
+
 
 
 # Password validation
@@ -161,9 +164,13 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'redis://localhost:6379/1'
+        'LOCATION': 'redis://redis:6379/1'
     }
 }
+
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -173,6 +180,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'shyngysuly04@gmail.com'
 EMAIL_HOST_PASSWORD = 'tlus agnf olva ogoa'
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'front')]
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

@@ -1,25 +1,6 @@
 version: '3.9'
 
 services:
-  web:
-    build: .
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
-    volumes:
-      - .:/code
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
-    environment:
-      - DEBUG=1
-      - SECRET_KEY=your-secret-key
-      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
-      - DATABASE_NAME=scheduler
-      - DATABASE_USER=scheduler_user
-      - DATABASE_PASSWORD=scheduler_pass
-      - DATABASE_HOST=db
-      - DATABASE_PORT=5432
-
   db:
     image: postgres:15
     environment:
@@ -28,6 +9,50 @@ services:
       POSTGRES_PASSWORD: scheduler_pass
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  web:
+    build: .
+    command: sh -c "python manage.py migrate && gunicorn core.wsgi:application --bind 0.0.0.0:8000"
+    volumes:
+      - .:/code
+    expose:
+      - "8000"
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DEBUG=0
+      - SECRET_KEY=your-secret-key
+      - DATABASE_NAME=scheduler
+      - DATABASE_USER=scheduler_user
+      - DATABASE_PASSWORD=scheduler_pass
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+
+  worker:
+    build: .
+    command: celery -A core worker --loglevel=info
+    volumes:
+      - .:/code
+    depends_on:
+      - db
+      - redis
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./front:/front
+      - ./staticfiles:/staticfiles
+    depends_on:
+      - web
 
 volumes:
   postgres_data:
