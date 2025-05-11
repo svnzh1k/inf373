@@ -17,7 +17,6 @@ class PracticeSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# serializers.py
 class SubscriberSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscriber

@@ -36,7 +36,7 @@ class SubjectCreateView(APIView):
         serializer = SubjectSerializer(data=request.data)
         if serializer.is_valid():
             subject = serializer.save()
-            # notify_subscribers_new_subject.delay(subject.subject_name)  # 🚀
+            # notify_subscribers_new_subject.delay(subject.subject_name)
             notify_subscribers_new_subject.apply_async(
                 args=[subject.subject_name],
                 countdown=100
@@ -203,7 +203,7 @@ class SubscriberCreateView(APIView):
 
 
 class SubscriberListView(APIView):
-    permission_classes = [IsAuthenticated]  # например, только админы
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(responses={200: SubscriberSerializer(many=True)})
     def get(self, request):
