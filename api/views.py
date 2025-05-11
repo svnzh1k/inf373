@@ -82,15 +82,9 @@ class LectureListView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(responses={200: LectureSerializer(many=True)})
-    def get(self, request):
-        cache_key = 'lecture_list'
-        cached_data = cache.get(cache_key)
-        if cached_data is not None:
-            return Response(cached_data)
-
-        lectures = Lecture.objects.all()
+    def get(self, request, subject_id):
+        lectures = Lecture.objects.filter(subject_id=subject_id)
         serializer = LectureSerializer(lectures, many=True)
-        cache.set(cache_key, serializer.data, timeout=60 * 5)
         return Response(serializer.data)
 
 
@@ -143,15 +137,9 @@ class PracticeListView(APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(responses={200: PracticeSerializer(many=True)})
-    def get(self, request):
-        cache_key = 'practice_list'
-        cached_data = cache.get(cache_key)
-        if cached_data is not None:
-            return Response(cached_data)
-
-        practices = Practice.objects.all()
+    def get(self, request, lecture_id):
+        practices = Practice.objects.filter(lecture_id=lecture_id)
         serializer = PracticeSerializer(practices, many=True)
-        cache.set(cache_key, serializer.data, timeout=60 * 5)
         return Response(serializer.data)
 
 

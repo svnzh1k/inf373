@@ -71,7 +71,7 @@ function fetchAndDisplayLectures(id, code, subject_name) {
   trH3.textContent = 'Duration';
   trHeader.append(trH1, trH2, trH3);
   trHeader.style.backgroundColor = "rgb(255,228,196)";
-  fetch(`http://0.0.0.0:80api/lectures/${id}`)
+  fetch(`http://0.0.0.0:80/api/lectures/${id}`)
     .then(response => response.json())
     .then(lectures => {
       lecturesList.innerHTML = '';
